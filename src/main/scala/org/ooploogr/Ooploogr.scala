@@ -39,7 +39,6 @@ object Ooploogr extends App {
   var UPDATE_COUNT: Int = 0
   var DELETE_COUNT: Int = 0
   val REPORT_INTERVAL = 10000L
-  val EXIT_INTERVAL = 3600000L
   val LONG_FORMAT = new DecimalFormat("###,###")
 
   Console.println("Starting Ooploogr")
@@ -92,14 +91,18 @@ object Ooploogr extends App {
       }
   })
 
-  // Wait until we become inactive to quit
+  // Look for a stop file to quit
   while (true) {
-    val durationSinceLastOutput = System.currentTimeMillis() - lastOutput;
-    if (durationSinceLastOutput > EXIT_INTERVAL)
-      System.exit(closeConnections())
+    val file = new java.io.File("stop.txt")
+    if(file.exists()) {
+      Console.err.println("Found stop file, exiting")
+      closeConnections()
+      file.delete()
+      System.exit(0)
+    }
     else
       try {
-        Thread.sleep(REPORT_INTERVAL)
+        Thread.sleep(1000L)
       }
       catch {
         case e: Exception => {
