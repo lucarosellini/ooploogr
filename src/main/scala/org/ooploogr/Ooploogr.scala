@@ -7,7 +7,7 @@ import java.nio.ByteOrder
 import org.bson.{BasicBSONObject, BSON}
 import java.lang.String
 import java.util.{Date, StringTokenizer}
-import reactivemongo.api.MongoConnection
+import reactivemongo.api.{QueryOpts, MongoConnection, DefaultDB}
 import play.api.libs.iteratee.Iteratee
 import concurrent.{Await, Future}
 import reactivemongo.bson.BSONTimestamp
@@ -15,7 +15,6 @@ import util.Failure
 import reactivemongo.core.commands.RawCommand
 import util.Success
 import reactivemongo.bson.BSONString
-import reactivemongo.api.DefaultDB
 import scala.concurrent.duration._
 import java.text.DecimalFormat
 
@@ -61,7 +60,7 @@ object Ooploogr extends App {
   var query = BSONDocument()
   if (timestamp != 0)
     query = BSONDocument("ts" -> BSONDocument("$gt" -> toBSONTimestamp(timestamp)))
-  val cursor = collection.find(query)
+  val cursor = collection.find(query, QueryOpts().tailable.awaitData)
   var lastOutput = System.currentTimeMillis()
   cursor.enumerate.apply(Iteratee.foreach {
     doc =>
