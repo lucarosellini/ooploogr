@@ -10,9 +10,10 @@ import reactivemongo.bson._
 import reactivemongo.bson.handlers.DefaultBSONHandlers._
 import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
-import org.bson.{BSON, BasicBSONObject}
+import org.bson.{BSONObject, BSON, BasicBSONObject}
 import org.ooploogr.Ooploogr
 import reactivemongo.utils.Converters
+import java.util.Date
 
 /**
  * @author gstathis
@@ -30,11 +31,8 @@ class OoploogrTestScala {
 
   @Test
   def playingWithBSONTimestamp(): Unit = {
-    val t1 = new org.bson.types.BSONTimestamp(1361152018, 0)
-    val doc = new BasicBSONObject("ts", t1)
-    val buffer = ChannelBuffers.dynamicBuffer(ByteOrder.LITTLE_ENDIAN, 256)
-    buffer.writeBytes(BSON.encode(doc))
     Assert.assertEquals(BSONTimestamp(5846103402194403328L), Ooploogr.toBSONTimestamp(1361152018))
+    Assert.assertEquals(1361152018, Ooploogr.fromBSONTimestamp(BSONTimestamp(5846103402194403328L)))
   }
 
 }

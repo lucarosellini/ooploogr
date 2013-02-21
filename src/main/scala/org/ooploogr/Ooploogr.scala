@@ -6,7 +6,7 @@ import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
 import org.bson.{BasicBSONObject, BSON}
 import java.lang.String
-import java.util.StringTokenizer
+import java.util.{Date, StringTokenizer}
 import reactivemongo.api.MongoConnection
 import play.api.libs.iteratee.Iteratee
 import concurrent.{Await, Future}
@@ -38,7 +38,7 @@ object Ooploogr extends App {
   var INSERT_COUNT: Int = 0
   var UPDATE_COUNT: Int = 0
   var DELETE_COUNT: Int = 0
-  val REPORT_INTERVAL = 10000L
+  val REPORT_INTERVAL = 100L
   val EXIT_INTERVAL = 10000L * 3
   val LONG_FORMAT = new DecimalFormat("###,###")
 
@@ -80,7 +80,13 @@ object Ooploogr extends App {
       Ooploogr.synchronized {
         val durationSinceLastOutput = System.currentTimeMillis() - lastOutput;
         if (durationSinceLastOutput > REPORT_INTERVAL) {
-          report(INSERT_COUNT, UPDATE_COUNT, DELETE_COUNT, OPERATIONS_READ, OPERATIONS_SKIPPED, System.currentTimeMillis() - START_TIME);
+          report(INSERT_COUNT,
+            UPDATE_COUNT,
+            DELETE_COUNT,
+            OPERATIONS_READ,
+            OPERATIONS_SKIPPED,
+            System.currentTimeMillis() - START_TIME,
+            fromBSONTimestamp(doc.get("ts").get.asInstanceOf[BSONTimestamp]));
           lastOutput = System.currentTimeMillis();
         }
       }
@@ -113,6 +119,12 @@ object Ooploogr extends App {
     BSONDocument(buffer).get("ts").get.asInstanceOf[BSONTimestamp]
   }
 
+  def fromBSONTimestamp(t: BSONTimestamp): Int = {
+    val reverseDoc = BSONDocument("ts" -> t)
+    val backTobson = BSON.decode(reverseDoc.toBuffer.array())
+    backTobson.get("ts").asInstanceOf[org.bson.types.BSONTimestamp].getTime
+  }
+
   private def closeConnections(): Int = {
     Console.println("Closing connections")
     val sourceClose = SOURCE_CONNECTION.askClose()(TIMEOUT)
@@ -133,9 +145,12 @@ object Ooploogr extends App {
     Await.ready(closeFuture, TIMEOUT)
   }
 
-  private def report(inserts: Long, updates: Long, deletes: Long, totalCount: Long, skips: Long, duration: Long) {
+  private def report(inserts: Long, updates: Long, deletes: Long, totalCount: Long, skips: Long, duration: Long, timestamp: Int) {
     val brate = totalCount.asInstanceOf[Double] / ((duration) / 1000.0)
-    System.out.println("inserts: " + LONG_FORMAT.format(inserts) + ", updates: " + LONG_FORMAT.format(updates) + ", deletes: " + LONG_FORMAT.format(deletes) + ", skips: " + LONG_FORMAT.format(skips) + " (" + LONG_FORMAT.format(brate) + " req/sec)");
+    System.out.println("inserts: "
+      + LONG_FORMAT.format(inserts) + ", updates: " + LONG_FORMAT.format(updates)
+      + ", deletes: " + LONG_FORMAT.format(deletes) + ", skips: " + LONG_FORMAT.format(skips)
+      + " (" + LONG_FORMAT.format(brate) + " req/sec), last ts: " + new Date(timestamp * 1000L));
   }
 
   private def processRecord(doc: TraversableBSONDocument) = {
