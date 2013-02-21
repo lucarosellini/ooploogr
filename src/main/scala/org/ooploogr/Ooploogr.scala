@@ -150,7 +150,7 @@ object Ooploogr extends App {
 
   private def report(inserts: Long, updates: Long, deletes: Long, totalCount: Long, skips: Long, duration: Long, timestamp: Int) {
     val brate = totalCount.asInstanceOf[Double] / ((duration) / 1000.0)
-    System.out.println("inserts: "
+    Console.println("inserts: "
       + LONG_FORMAT.format(inserts) + ", updates: " + LONG_FORMAT.format(updates)
       + ", deletes: " + LONG_FORMAT.format(deletes) + ", skips: " + LONG_FORMAT.format(skips)
       + " (" + LONG_FORMAT.format(brate) + " req/sec), last ts: " + new Date(timestamp * 1000L));
@@ -206,7 +206,7 @@ object Ooploogr extends App {
     } catch {
       case
         e: Exception =>
-        System.err.println("failed to process record " + BSONDocument.pretty(operation))
+        Console.err.println("failed to process record " + BSONDocument.pretty(operation))
         e.printStackTrace()
     }
   }
@@ -214,7 +214,7 @@ object Ooploogr extends App {
   private def completeOrError(future: Future[_], msg: String, increment: => Unit) = {
     future.onComplete {
       case Failure(e) =>
-      //Console.err.println("Did not process record: " + e.getMessage)
+        Console.err.println(String.format("Did not process '%s'. Error was '%s'",msg, e.getMessage))
       case Success(lasterror) => {
         increment
         //Console.println(msg)
@@ -242,7 +242,7 @@ object Ooploogr extends App {
       }
       catch {
         case e: Exception =>
-          System.err.println("Timestamp provided is not a valid number: " + fromTime)
+          Console.err.println("Timestamp provided is not a valid number: " + fromTime)
       }
     }
     ret
@@ -352,7 +352,7 @@ object Ooploogr extends App {
           case "-c" => COLLECTION_STRING = args(i + 1); skip = true
           case "-r" => COL_REMAPPINGS = args(i + 1); skip = true
           case "-R" => DB_REMAPPINGS = args(i + 1); skip = true
-          case _ => System.err.println("Unknown parameter " + args(i))
+          case _ => Console.err.println("Unknown parameter " + args(i))
           return false
         }
       }
@@ -364,7 +364,7 @@ object Ooploogr extends App {
     if (null == DESTINATION_HOST)
       DESTINATION_HOST = "localhost"
     if (SOURCE_HOST.equals(DESTINATION_HOST) && null == DB_REMAPPINGS) {
-      System.err.println("Source and destination hosts need to be different if no DB remappings are used. Currently set to " + SOURCE_HOST)
+      Console.err.println("Source and destination hosts need to be different if no DB remappings are used. Currently set to " + SOURCE_HOST)
       return false
     }
     true
