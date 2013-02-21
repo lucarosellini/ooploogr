@@ -308,13 +308,19 @@ object Ooploogr extends App {
   }
 
   private def shouldProcess(doc: BSONDocument, includedCollections: List[String], excludedCollections: List[String]): Boolean = {
-    val collection = doc.toTraversable.get("ns").get.asInstanceOf[BSONString].value
-    var process: Boolean = false
-    if (includedCollections.contains(collection))
-      process = true
-    if (excludedCollections.contains(collection))
-      process = false
-    process
+    val namespace = doc.toTraversable.get("ns").get.asInstanceOf[BSONString].value
+    if (null == namespace || "".equals(namespace))
+      return false
+    if (excludedCollections.size == 0 && includedCollections.size == 0)
+      return true
+    if (excludedCollections.contains(namespace))
+      return false
+    if (includedCollections.contains(namespace) || includedCollections.contains("*"))
+      return true
+    if (namespace.indexOf('.') > 0 && includedCollections.contains(namespace.substring(0, namespace.indexOf('.'))))
+      return true
+
+    return false
   }
 
   private def parseArgs(args: Array[String]): Boolean = {
