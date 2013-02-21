@@ -9,7 +9,7 @@ Ironically, without this ability to play back oplogs, ReactiveMongo would normal
 
 Install
 -------
-- `git clone git@github.com:gpstathis/ooploogr.git`
+- `git clone git://github.com/gpstathis/ooploogr.git`
 - `cd ooploogr`
 - `sbt assembly`
 - Run `java -jar target/ooploogr-assembly-1.0.jar` for usage
