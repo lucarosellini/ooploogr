@@ -95,7 +95,7 @@ object Ooploogr extends App {
   while (true) {
     val file = new java.io.File("stop.txt")
     if(file.exists()) {
-      Console.err.println("Found stop file, exiting")
+      Console.println("Found stop file, exiting")
       closeConnections()
       file.delete()
       System.exit(0)
@@ -106,7 +106,7 @@ object Ooploogr extends App {
       }
       catch {
         case e: Exception => {
-          Console.err.println("Application thread was interrupted")
+          Console.println("Application thread was interrupted")
           System.exit(closeConnections())
         }
       }
@@ -128,6 +128,20 @@ object Ooploogr extends App {
     backTobson.get("ts").asInstanceOf[org.bson.types.BSONTimestamp].getTime
   }
 
+  def printFlat(doc: BSONDocument): String = {
+    "{ "+printFlat(doc.toTraversable.iterator)+" }"
+  }
+
+  private def printFlat(it: Iterator[BSONElement]): String = {
+    (for(v <- it) yield {
+      v.value match {
+        case doc :TraversableBSONDocument => v.name + ": { " + printFlat(doc.iterator) + " }"
+        case array :TraversableBSONArray => v.name + ": [ " + printFlat(array.iterator) +" ]"
+        case _ => v.name + ": " + v.value.toString
+      }
+    }).mkString(", ")
+  }
+
   private def closeConnections(): Int = {
     Console.println("Closing connections")
     val sourceClose = SOURCE_CONNECTION.askClose()(TIMEOUT)
@@ -140,7 +154,7 @@ object Ooploogr extends App {
   private def waitForClose(closeFuture: Future[_], name: String) = {
     closeFuture.onComplete {
       case Failure(e) =>
-        Console.err.println("Could not close " + name + " connection: " + e.getMessage)
+        Console.println("Could not close " + name + " connection: " + e.getMessage)
       case Success(lasterror) => {
         Console.println("Closed " + name + " connection")
       }
@@ -165,14 +179,10 @@ object Ooploogr extends App {
     val targetDb = getDB(namespace, mappings._1)
     val targetCollection = targetDb.collection(targetCollectionName)
 
-    //Console.println("Processing:" + BSONDocument.pretty(doc))
-    //val targetDatabaseName: String = getDatabaseMapping(namespace, mappings._1)
-    //Console.println(String.format("db: %s, coll: %s, op: %s, ms: %s", targetDatabaseName, targetCollectionName, operationType, namespace))
-
     try {
       if ("i".equals(operationType)) {
         val futureInsert = targetCollection.insert(operation)
-        completeOrError(futureInsert, "insert: " + BSONDocument.pretty(operation), {
+        completeOrError(futureInsert, String.format("{ ns: %s, op:%s, o: %s }", namespace, operationType, printFlat(operation)), {
           Ooploogr.synchronized {
             INSERT_COUNT = INSERT_COUNT + 1
           }
@@ -181,7 +191,7 @@ object Ooploogr extends App {
       }
       else if ("d".equals(operationType)) {
         val futureRemove = targetCollection.remove(operation)
-        completeOrError(futureRemove, "delete: " + BSONDocument.pretty(operation), {
+        completeOrError(futureRemove, String.format("{ ns: %s, op:%s, o: %s }", namespace, operationType, printFlat(operation)), {
           Ooploogr.synchronized {
             DELETE_COUNT = DELETE_COUNT + 1
           }
@@ -191,7 +201,7 @@ object Ooploogr extends App {
       else if ("u".equals(operationType)) {
         val o2: BSONDocument = BSONDocument(doc.get("o2").get.asInstanceOf[BSONDocument].toBuffer)
         val futureUpdate = targetCollection.update(o2, operation)
-        completeOrError(futureUpdate, "update: " + BSONDocument.pretty(o2) + ", with: " + BSONDocument.pretty(operation), {
+        completeOrError(futureUpdate, String.format("{ ns: %s, op:%s, o2: %s , o: %s }", namespace, operationType, printFlat(o2), printFlat(operation)), {
           Ooploogr.synchronized {
             UPDATE_COUNT = UPDATE_COUNT + 1
           }
@@ -200,13 +210,13 @@ object Ooploogr extends App {
       }
       else if ("c".equals(operationType)) {
         val futureCommand = db.command(RawCommand(operation))
-        completeOrError(futureCommand, "command: " + BSONDocument.pretty(operation), {})
+        completeOrError(futureCommand, String.format("{ ns: %s, op:%s, o: %s }", namespace, operationType, printFlat(operation)), {})
         Await.ready(futureCommand, TIMEOUT)
       }
     } catch {
       case
         e: Exception =>
-        Console.err.println("failed to process record " + BSONDocument.pretty(operation))
+        Console.println("failed to process record " + printFlat(operation))
         e.printStackTrace()
     }
   }
@@ -214,7 +224,7 @@ object Ooploogr extends App {
   private def completeOrError(future: Future[_], msg: String, increment: => Unit) = {
     future.onComplete {
       case Failure(e) =>
-        Console.err.println(String.format("Did not process '%s'. Error was '%s'",msg, e.getMessage))
+        Console.println(String.format("Did not process '%s'. Error was '%s'",msg, e.getMessage))
       case Success(lasterror) => {
         increment
         //Console.println(msg)
@@ -242,7 +252,7 @@ object Ooploogr extends App {
       }
       catch {
         case e: Exception =>
-          Console.err.println("Timestamp provided is not a valid number: " + fromTime)
+          Console.println("Timestamp provided is not a valid number: " + fromTime)
       }
     }
     ret
@@ -352,7 +362,7 @@ object Ooploogr extends App {
           case "-c" => COLLECTION_STRING = args(i + 1); skip = true
           case "-r" => COL_REMAPPINGS = args(i + 1); skip = true
           case "-R" => DB_REMAPPINGS = args(i + 1); skip = true
-          case _ => Console.err.println("Unknown parameter " + args(i))
+          case _ => Console.println("Unknown parameter " + args(i))
           return false
         }
       }
@@ -364,7 +374,7 @@ object Ooploogr extends App {
     if (null == DESTINATION_HOST)
       DESTINATION_HOST = "localhost"
     if (SOURCE_HOST.equals(DESTINATION_HOST) && null == DB_REMAPPINGS) {
-      Console.err.println("Source and destination hosts need to be different if no DB remappings are used. Currently set to " + SOURCE_HOST)
+      Console.println("Source and destination hosts need to be different if no DB remappings are used. Currently set to " + SOURCE_HOST)
       return false
     }
     true
