@@ -38,8 +38,8 @@ object Ooploogr extends App {
   var INSERT_COUNT: Int = 0
   var UPDATE_COUNT: Int = 0
   var DELETE_COUNT: Int = 0
-  val REPORT_INTERVAL = 100L
-  val EXIT_INTERVAL = 10000L * 3
+  val REPORT_INTERVAL = 10000L
+  val EXIT_INTERVAL = 10000L * 18
   val LONG_FORMAT = new DecimalFormat("###,###")
 
   Console.println("Starting Ooploogr")
