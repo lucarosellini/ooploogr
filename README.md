@@ -5,7 +5,7 @@ This is a simple tool for playing back MongoDB oplog entries from one server to 
 
 It uses the [ReactiveMongo](http://reactivemongo.org/) scala driver which is currently the only driver that I am aware of (besides the native C one) that does not seem affected by the [repeated fields issue](https://jira.mongodb.org/browse/SERVER-1606)
 
-Ironically, without this ability to play back oplogs, ReactiveMongo would normally not have been the best fit for this job because of its' asynchronous design. Oplogs need to be played back in order! So care had to be taken to wait for each command to finish before moving on to the next one. So definitely doing a lot of blocking here which quite the opposite of the driver's intent.
+Ironically, without this ability to play back oplogs, ReactiveMongo would not have been the best fit for this job because of its' asynchronous design. Oplogs need to be played back in order! So care had to be taken to wait for each command to finish before moving on to the next one. So definitely doing a lot of blocking here which is quite the opposite of the driver's intent.
 
 Install
 -------
