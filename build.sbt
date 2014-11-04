@@ -6,7 +6,7 @@ name := "ooploogr"
 
 version := "1.0"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.4"
 
 resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 
@@ -20,4 +20,12 @@ libraryDependencies += "com.novocode"           % "junit-interface"         % "0
 
 libraryDependencies += "org.mongodb"            % "mongo-java-driver"       % "2.10.1"
 
-libraryDependencies += "org.reactivemongo"      %% "reactivemongo"          % "0.8"
+libraryDependencies += "org.reactivemongo"      %% "reactivemongo"          % "0.10.5.0.akka23"
+
+libraryDependencies += "org.reactivemongo"      %% "reactivemongo-extensions-core" % "0.10.5.0.0.akka23"
+
+libraryDependencies += "com.typesafe.akka" 		  %% "akka-actor" 		% "2.3.6"
+
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2"
+
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"

@@ -17,3 +17,4 @@ version.properties
 .scala_dependencies
 .idea
 .idea_modules
+.cache
