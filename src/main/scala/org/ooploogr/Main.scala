@@ -20,7 +20,7 @@ import reactivemongo.bson.BSONString
 import scala.concurrent.duration._
 import java.text.DecimalFormat
 import akka.actor.ActorSystem
-import org.ooploogr.actors.DocProcessorActor
+import org.ooploogr.actors.KafkaProducerActor
 import akka.actor.Props
 import org.ooploogr.message.{StartProcessing, StopProcessing, DocMessage}
 import org.ooploogr.actors.OplogTailActor
@@ -51,15 +51,16 @@ object Main extends App {
   var collections: (List[String], List[String]) = parseCollections(COLLECTION_STRING)
 
   val akkaSystem = ActorSystem("AkkaActorSystem")
+
   val prop = Props(classOf[OplogTailActor], SOURCE_HOST, FROM_TIME, collections._1, collections._2)
   
   val tailActor = akkaSystem.actorOf(prop, "oplogTailActor")
 
-  tailActor ! StartProcessing()
+  tailActor ! StartProcessing
 
   sys addShutdownHook {
     Console.println("Shutdown hook caught.")
-    tailActor ! StopProcessing()
+    tailActor ! StopProcessing
     Console.println("Done shutting down.")
   }
 

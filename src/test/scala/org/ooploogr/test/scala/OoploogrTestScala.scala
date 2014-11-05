@@ -34,12 +34,13 @@ class OoploogrTestScala {
     Assert.assertEquals(1361152018, OplogTailActor.fromBSONTimestamp(BSONTimestamp(5846103402194403328L)))
   }
 
+  /*
   @Test
   def playingWithBSONDocumentPrint(): Unit = {
     val doc = BSONDocument()
       .add("$set" -> BSONDocument().add("foo" -> BSONBoolean(true)))
       .add("$set" -> BSONDocument().add("bar" -> BSONBoolean(true)))
     Assert.assertEquals("{ $set: { foo: BSONBoolean(true) }, $set: { bar: BSONBoolean(true) } }", OplogTailActor.printFlat(doc))
-  }
+  }*/
 
 }
