@@ -7,7 +7,6 @@ import com.datastax.driver.core.querybuilder.QueryBuilder.{eq => dstxeq}
 import com.datastax.driver.core.utils.Bytes
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import org.ooploogr.message.{SaveTimestamp, Ack, StopProcessing}
-import org.ooploogr.serializers.BSONTimestampKryoCodec
 import reactivemongo.bson.BSONTimestamp
 
 object GetTimestamp

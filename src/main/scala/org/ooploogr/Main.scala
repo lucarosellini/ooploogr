@@ -67,7 +67,7 @@ object Main extends App {
   sys addShutdownHook {
     Console.println("Shutdown hook caught.")
     val future = tailActor ? StopProcessing
-    Await.ready(future, TIMEOUT)
+    Await.result(future, TIMEOUT)
     Console.println("Done shutting down.")
   }
 

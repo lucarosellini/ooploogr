@@ -165,9 +165,9 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
     case StopProcessing => {
       logger.info("Received StopProcessing")
       var future = processorActor ? StopProcessing
-      Await.ready(future, TIMEOUT)
+      Await.result(future, TIMEOUT)
       future = lastTimestampActor ? StopProcessing
-      Await.ready(future, TIMEOUT)
+      Await.result(future, TIMEOUT)
       closeConnections()
       sender ! Ack
       context stop self
