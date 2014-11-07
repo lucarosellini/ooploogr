@@ -22,11 +22,13 @@ import java.text.DecimalFormat
 import akka.actor.ActorSystem
 import org.ooploogr.actors.KafkaProducerActor
 import akka.actor.Props
-import org.ooploogr.message.{StartProcessing, StopProcessing, DocMessage}
+import org.ooploogr.message.{StartProcessing, StopProcessing}
 import org.ooploogr.actors.OplogTailActor
 import org.ooploogr.actors.OplogTailActor
 import scala.collection.immutable.List
+import akka.pattern.ask
 
+import akka.util.Timeout
 /**
  * Application entry point.
  * Starts the Akka system and starts the tailing actor.
@@ -41,6 +43,10 @@ object Main extends App {
   val LONG_FORMAT = new DecimalFormat("###,###")
 
   Console.println("Starting Ooploogr")
+
+  val TIMEOUT = Duration(30000, MILLISECONDS)
+
+  implicit val timeout = Timeout(1 minutes)
   
   val START_TIME = System.currentTimeMillis()
   if (!parseArgs(args)) {
@@ -60,7 +66,8 @@ object Main extends App {
 
   sys addShutdownHook {
     Console.println("Shutdown hook caught.")
-    tailActor ! StopProcessing
+    val future = tailActor ? StopProcessing
+    Await.ready(future, TIMEOUT)
     Console.println("Done shutting down.")
   }
 

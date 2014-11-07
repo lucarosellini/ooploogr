@@ -6,38 +6,37 @@ import java.util.Properties
 import akka.actor.Actor
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.LazyLogging
+import kafka.kryo.bson.BSONDocumentKryoEncoder
 import kafka.producer.{KeyedMessage, Producer, ProducerConfig, Partitioner}
 import org.jboss.netty.buffer.ChannelBuffers
-import org.ooploogr.message.{Ack, DocMessage}
+import org.ooploogr.message.{ProcessDocument, StopProcessing, Ack}
 import reactivemongo.bson._
 import reactivemongo.core.netty.ChannelBufferWritableBuffer
 import scala.collection.JavaConversions._
+//import uk.gov.hmrc.mongo.ExtraBSONHandlers._
 
 /**
  * Processes a BSONDocument.
- *
- * // TODO
  */
-class KafkaProducerActor extends Actor with LazyLogging{
+class KafkaProducerActor extends Actor with LazyLogging with ConfigAware {
 
-  val config = ConfigFactory.load()
   val topic = "mongo.oplog"
-  val brokers = config.getStringList("kafka.brokers").mkString(",")
 
-  val props = new Properties();
+  val props = new Properties()
 
-  props.put("metadata.broker.list", brokers);
-  props.put("serializer.class", "kafka.serializer.StringEncoder");
+  props.put("metadata.broker.list", kafkaBrokers);
+  props.put("serializer.class", "kafka.kryo.bson.BSONDocumentKryoEncoder");
+  props.put("key.serializer.class", "kafka.serializer.StringEncoder");
   //props.put("partitioner.class", "example.producer.SimplePartitioner");
   props.put("request.required.acks", "1");
 
   val producerConfig = new ProducerConfig(props);
-  val producer = new Producer[String, String](producerConfig)
+  val producer = new Producer[String, BSONDocument](producerConfig)
 
-  logger.debug(""+brokers)
+  logger.debug(""+kafkaBrokers)
 
   override def receive = {
-    case DocMessage(doc: BSONDocument) => {
+    case ProcessDocument(doc: BSONDocument) => {
 
       val operationType: String = doc.get("op").get.asInstanceOf[BSONString].value
       val id = ""+doc.get("h").get.asInstanceOf[BSONLong].value
@@ -45,11 +44,18 @@ class KafkaProducerActor extends Actor with LazyLogging{
 
       //logger.debug(s"received: ${OplogTailActor.printFlat(doc).substring(0,60)}")
 
-      val msg = new KeyedMessage(topic, id, BSONDocument.pretty(doc))
+      val msg = new KeyedMessage(topic, id, doc)
 
       producer.send(msg)
 
       sender ! Ack
+    }
+    case StopProcessing => {
+      logger.info("Received StopProcessing")
+      producer.close()
+
+      sender ! Ack
+      context stop self
     }
     case _ => println("Received unknown message")
   }

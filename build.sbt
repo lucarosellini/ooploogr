@@ -26,9 +26,16 @@ libraryDependencies += "com.typesafe.akka" 		  %% "akka-actor" 		% "2.3.6"
 
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2"
 
+libraryDependencies += "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.2"
+
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
 
 libraryDependencies ++= Seq("org.apache.kafka" % "kafka_2.10" % "0.8.1.1"
                                   exclude("com.sun.jdmk","jmxtools")
-                                  exclude("com.sun.jmx","jmxri")
+                                  exclude("com.sun.jmx","jmxri"),
+                            "es.care.sf.business" % "kafka.kryo.codec" % "1.0.3"
+                              exclude("org.apache.zookeeper","zookeeper")
+                              exclude("org.apache.kafka","kafka_2.10")
+                            //,"uk.gov.hmrc" %% "simple-reactivemongo" % "1.1.0",
+                            //"com.typesafe.play" %% "play-json" % "2.2.3" //supports from 2.1.0
 )

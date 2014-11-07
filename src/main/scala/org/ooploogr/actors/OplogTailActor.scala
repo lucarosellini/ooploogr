@@ -111,11 +111,15 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
   var DELETE_COUNT: Int = 0
   val REPORT_INTERVAL = 100L
   val LONG_FORMAT = new DecimalFormat("###,###")
+
+  implicit val timeout = Timeout(1 minutes)
   val TIMEOUT = Duration(30000, MILLISECONDS)
+
 
   var lastOutput = System.currentTimeMillis()
   val START_TIME = System.currentTimeMillis()
-  val processorActor = context.system.actorOf(Props[KafkaProducerActor], "docProcessorActor")
+  val processorActor = context.system.actorOf(Props[KafkaProducerActor], "kafkaProducerActor")
+  val lastTimestampActor = context.system.actorOf(Props[LastTimestampActor], "lastTimestampActor")
 
   logger.debug("Connecting to MongoDB")
 
@@ -125,7 +129,6 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
   val db = connection.db("local")
   val collection = db.collection[BSONCollection]("oplog.rs")
 
-  logger.info(s"Last timestamp: $lastTimestamp")
   logger.info(s"Included collections: $includedCollections")
 
   /**
@@ -136,7 +139,7 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
     var query = BSONDocument()
     val timestamp = parseTimestamp(lastTimestamp)
 
-    logger.info(s"lastTimestamp: $lastTimestamp, timestamp: $timestamp")
+    logger.info(s"lastTimestamp: $timestamp")
 
     if (timestamp > 0) {
       query = BSONDocument("ts" -> BSONDocument("$gt" -> OplogTailActor.toBSONTimestamp(timestamp).asInstanceOf[BSONValue]))
@@ -156,11 +159,17 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
 
   override def receive = {
     case StartProcessing => {
-      logger.debug("Received StartProcessing")
+      logger.info("Received StartProcessing")
       startOplogTail()
     }
     case StopProcessing => {
-      logger.debug("Received StopProcessing")
+      logger.info("Received StopProcessing")
+      var future = processorActor ? StopProcessing
+      Await.ready(future, TIMEOUT)
+      future = lastTimestampActor ? StopProcessing
+      Await.ready(future, TIMEOUT)
+      closeConnections()
+      sender ! Ack
       context stop self
     }
     case ProcessDocument(doc:BSONDocument) => {
@@ -170,6 +179,15 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
   }
 
   private def parseTimestamp(fromTime: String): Int = {
+    val future = lastTimestampActor ? GetTimestamp
+    val res = Await.result(future, TIMEOUT)
+
+    res match {
+      case ts:Some[BSONTimestamp] => OplogTailActor.fromBSONTimestamp(ts.get)
+      case _ => 0
+    }
+
+    /*
     var ret = 0
     if (null != fromTime) {
       try {
@@ -181,6 +199,7 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
       }
     }
     ret
+    */
   }
 
   /**
@@ -189,9 +208,7 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
    */
   def processDoc(doc: BSONDocument) {
     if (shouldProcess(doc, includedCollections, excludedCollections)) {
-      val msg = DocMessage(doc)
-
-      implicit val timeout = Timeout(1 minutes)
+      val msg = ProcessDocument(doc)
 
       val future = processorActor ? msg
       future onSuccess {
@@ -208,12 +225,15 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
           else if ("c".equals(operationType)) {
             logger.info("Operation type c")
           }
+
+          lastTimestampActor ? SaveTimestamp(doc.get("ts").get.asInstanceOf[BSONTimestamp])
         }
 
       }
 
       future onFailure {
-        case _ => logger.info(s"failed to process doc:\n ${OplogTailActor.printFlat(doc)}")
+        case failure: Throwable => logger.error(s"failed to process doc:\n ${OplogTailActor.printFlat(doc)}", failure)
+        case _ => logger.error("Cannot determine failure object")
       }
       Await.ready(future, TIMEOUT)
 
@@ -288,13 +308,6 @@ class OplogTailActor(sourceHost: String, lastTimestamp: String,
       return true
 
     false
-  }
-
-  /**
-   * Actor shutdown hook
-   */
-  override def postStop(): Unit = {
-    closeConnections()
   }
 
   /**

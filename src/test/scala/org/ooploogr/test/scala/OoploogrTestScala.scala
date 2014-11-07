@@ -43,4 +43,9 @@ class OoploogrTestScala {
     Assert.assertEquals("{ $set: { foo: BSONBoolean(true) }, $set: { bar: BSONBoolean(true) } }", OplogTailActor.printFlat(doc))
   }*/
 
+  @Test
+  def playingWithBSONMap(): Unit = {
+
+  }
+
 }
